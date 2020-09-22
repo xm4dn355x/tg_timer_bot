@@ -11,7 +11,6 @@
 
 from datetime import datetime
 from datetime import timedelta
-from time import sleep
 import threading
 import psycopg2
 from psycopg2.extras import DictCursor
@@ -19,56 +18,69 @@ from psycopg2.extras import DictCursor
 
 ALERTS_LIST = []
 
+conn = psycopg2.connect(dbname='alerts_bot', user='alerts_bot', password='alerts_bot', host='localhost')
+cursor = conn.cursor(cursor_factory=DictCursor)
+cursor.execute("""SET TIMEZONE='Asia/Yekaterinburg';""")
 
-def make_alert(timer_delay, chat_id, user, message):
+
+def make_alert(id, timer_delay, chat_id, user, message):
     """Создает событие оповещения"""
-    t = threading.Timer(timer_delay, send_alert, args=(chat_id, user, message,))
+    t = threading.Timer(timer_delay, send_alert, args=(id, chat_id, user, message,))
     t.start()
     return t.name
 
 
-def send_alert(chat_id, user, message):
+def send_alert(id, chat_id, user, message):
     """Мок функция для проверки работы оповещений"""
     print(f'alert: {chat_id} {user} {message} {datetime.now()}')
     thread_name = threading.current_thread().name
-    pop_allert(str(thread_name))
+    pop_allert(id, thread_name)
 
 
 
 def calculate_timer_delay(alert_time):
     """Высчитывает время до оповещения"""
-    return alert_time - datetime.now()
+    res = alert_time.replace(tzinfo=None) - datetime.now().replace(tzinfo=None)
+    if res < timedelta(seconds=0):
+        res = timedelta(seconds=5)
+    print(res)
+    return res
 
 
-def add_alert(time, chat_id, user, message):
+def add_alert(id, time, chat_id, user, message):
     """Создает событие оповещения и добавляет его в список"""
     timer_delay = calculate_timer_delay(time)
     timer_delay = float(timer_delay.seconds)
-    thread_name = make_alert(timer_delay, chat_id, user, message)
-    ALERTS_LIST.append(str(thread_name))
+    thread_name = make_alert(id, timer_delay, chat_id, user, message)
+    ALERTS_LIST.append({'id': id, 'thread_name': str(thread_name)})
 
 
-def pop_allert(thread_name):
-    ALERTS_LIST.remove(thread_name)
+def pop_allert(id, thread_name):
+    ALERTS_LIST.remove({'id': id, 'thread_name': thread_name})
+
+
+def get_alerts_list_from_db():
+    cursor.execute("""SELECT id, chat_id, username, time FROM alerts WHERE status = FALSE""")
+    return cursor.fetchall()
 
 
 if __name__ == '__main__':
-    print(datetime.now())
-    alert_time = datetime.now() + timedelta(seconds=10)
-    add_alert(alert_time, 3, 'xm4dn355x', 'hello1')
-    alert_time = datetime.now() + timedelta(seconds=5)
-    add_alert(alert_time, 2, 'xm4dn355x', 'hello2')
-    alert_time = datetime.now() + timedelta(seconds=10)
-    add_alert(alert_time, 4, 'xm4dn355x', 'hello3')
-    alert_time = datetime.now() + timedelta(seconds=20)
-    add_alert(alert_time, 5, 'xm4dn355x', 'hello4')
-    alert_time = datetime.now() + timedelta(seconds=3)
-    add_alert(alert_time, 1, 'xm4dn355x', 'hello5')
-    print(datetime.now())
+    alerts_list = get_alerts_list_from_db()
+    for alert in alerts_list:
+        add_alert(
+            id=alert['id'],
+            time=alert['time'],
+            chat_id=alert['chat_id'],
+            user=alert['username'],
+            message='Hello Bitch!'
+        )
+
+    # TODO: реализовать выключение потоков скорей всего добавлять в список потоки и потом прогоняться по имено и закрывать
+    # TODO: ебануть управление через бота
 
 
 # id
 # chat_id
 # user
 # time
-# alerts_bot
+# status
