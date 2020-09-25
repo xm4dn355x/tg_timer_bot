@@ -71,7 +71,11 @@ def generate_message(username):
 def get_alerts_list_from_db():
     """Получает список всех неотработавших таймеров"""
     cursor.execute("""SELECT id, chat_id, username, time FROM alerts WHERE status = FALSE""")
-    return cursor.fetchall()
+    try:
+        res = cursor.fetchall()
+    except psycopg2.ProgrammingError:
+        res = []
+    return res
 
 
 def change_alert_status_in_db(id):
