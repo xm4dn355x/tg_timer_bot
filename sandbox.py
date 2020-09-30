@@ -18,6 +18,7 @@ from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandle
 from telegram.utils.request import Request
 
 from bot_config import API_TOKEN
+from bot_decorators import admin_access, log_error
 
 
 # DB Connection
@@ -36,16 +37,6 @@ updater = Updater(bot=bot, use_context=True)
 dispatcher = updater.dispatcher
 
 
-def log_error(f):
-    def inner(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            print(f'ERROR: {e}')
-            raise e
-    return inner
-
-
 @log_error
 def start(update, context):
     """Команда /start"""
@@ -53,6 +44,17 @@ def start(update, context):
 
 start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
+
+
+@log_error
+@admin_access
+def secret_command(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        text='Секретные секреты',
+    )
+
+commands_secret_command = CommandHandler('secret', secret_command)
+dispatcher.add_handler(commands_secret_command)
 
 
 @log_error
@@ -81,7 +83,7 @@ def test_message_handler(update: Update, context: CallbackContext):
     )
 
     update.message.reply_text(
-        text='Йо! тестовое сообщение!',
+        text=f'Йо! тестовое сообщение! Ваш ID = {update.message.chat_id}',
         reply_markup=reply_markup,
     )
 
