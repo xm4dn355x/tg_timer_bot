@@ -18,6 +18,8 @@ from psycopg2.extras import DictCursor
 
 
 # Globals
+from sandbox import bot
+
 ALERTS_LIST = []
 
 # DB Connection
@@ -28,36 +30,42 @@ cursor.execute("""SET TIMEZONE='Asia/Yekaterinburg';""")
 
 def make_alert(id, timer_delay, chat_id, message):
     """Создает событие оповещения"""
-    t = threading.Timer(timer_delay, send_alert, args=(id, chat_id, message,))
+    print('make alert')
+    t = threading.Timer(timer_delay, send_alert, args=(id, chat_id, message))
     t.start()
     return t
 
 
 def send_alert(id, chat_id, message):   # TODO: Переделать замоканную функцию под метод бота.
     """Отправка оповещения"""
+    print('send alert')
     print(f'alert: {chat_id} {message} {datetime.now()}')
+    bot.send_message(chat_id=chat_id, text=message)
     pop_allert(id)
     change_alert_status_in_db(id)
 
 
 def calculate_timer_delay(alert_time):
     """Высчитывает время до оповещения"""
+    print('calculate timer delay')
     res = alert_time.replace(tzinfo=None) - datetime.now().replace(tzinfo=None)
     if res < timedelta(seconds=0):
         res = timedelta(seconds=5)
     return res
 
 
-def add_alert(id, time, chat_id, message):
+def add_alert(id, time, chat_id, message, bot):
     """Создает событие оповещения и добавляет его в список"""
+    print('add alert')
     timer_delay = calculate_timer_delay(time)
     timer_delay = float(timer_delay.seconds)
-    thread = make_alert(id, timer_delay, chat_id, message)
+    thread = make_alert(id, timer_delay, chat_id, message, bot)
     ALERTS_LIST.append({'id': id, 'thread': thread})
 
 
 def pop_allert(id):
     """Удаляет событие оповещения из списка"""
+    print('pop alert')
     for alert in ALERTS_LIST:
         if alert['id'] == id:
             ALERTS_LIST.remove(alert)
@@ -65,11 +73,13 @@ def pop_allert(id):
 
 def generate_message(username):
     """Генерирует сообщение, которое нужно отправить в чат"""
+    print('generate message')
     return f"@{username} Обратный отсчет окончен. Отчитайтесь пожалуйста"
 
 
 def get_alerts_list_from_db():
     """Получает список всех неотработавших таймеров"""
+    print('get alerts list from db')
     cursor.execute("""SELECT id, chat_id, username, time FROM alerts WHERE status = FALSE""")
     try:
         res = cursor.fetchall()
@@ -80,18 +90,21 @@ def get_alerts_list_from_db():
 
 def change_alert_status_in_db(id):
     """Изменяет статус таймера на отработанный в БД"""
+    print('change alert status in db')
     cursor.execute(f"""UPDATE alerts SET status = TRUE WHERE id = {int(id)};""")
     conn.commit()
 
 
 def run_timers_event_loop():
     """Запускает ивент луп с таймерами"""
+    print('run timers event loop')
     x = threading.Thread(target=timers_event_loop)
     return x
 
 
 def timers_event_loop():
     """Event loop для обработки тасков с таймерами"""
+    print('timers event loop')
     while True:
         alerts_list = get_alerts_list_from_db()
         for alert in alerts_list:
@@ -104,7 +117,7 @@ def timers_event_loop():
                     id=alert['id'],
                     time=alert['time'],
                     chat_id=alert['chat_id'],
-                    message=generate_message(alert['username'])
+                    message=generate_message(alert['username']),
                 )
         sleep(5)
 
