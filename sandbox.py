@@ -9,102 +9,85 @@
 #####################################################################################################################
 
 
-from datetime import datetime
-from datetime import timedelta
-from time import sleep
-import threading
+import logging
 import psycopg2
 from psycopg2.extras import DictCursor
 
+from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
+from telegram.utils.request import Request
 
-# Globals
-ALERTS_LIST = []
+from bot_config import API_TOKEN
+
 
 # DB Connection
 conn = psycopg2.connect(dbname='alerts_bot', user='alerts_bot', password='alerts_bot', host='localhost')
 cursor = conn.cursor(cursor_factory=DictCursor)
-cursor.execute("""SET TIMEZONE='Asia/Yekaterinburg';""")
+# cursor.execute("""SET TIMEZONE='Asia/Yekaterinburg';""")
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-def make_alert(id, timer_delay, chat_id, message):
-    """Создает событие оповещения"""
-    t = threading.Timer(timer_delay, send_alert, args=(id, chat_id, message,))
-    t.start()
-    return t
+BUTTON_HELP = 'Помощь'
+
+req = Request(connect_timeout=3)
+bot = Bot(request=req, token=API_TOKEN)
+updater = Updater(bot=bot, use_context=True)
+dispatcher = updater.dispatcher
 
 
-def send_alert(id, chat_id, message):   # TODO: Переделать замоканную функцию под метод бота.
-    """Отправка оповещения"""
-    print(f'alert: {chat_id} {message} {datetime.now()}')
-    pop_allert(id)
-    change_alert_status_in_db(id)
+def log_error(f):
+    def inner(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            print(f'ERROR: {e}')
+            raise e
+    return inner
 
 
-def calculate_timer_delay(alert_time):
-    """Высчитывает время до оповещения"""
-    res = alert_time.replace(tzinfo=None) - datetime.now().replace(tzinfo=None)
-    if res < timedelta(seconds=0):
-        res = timedelta(seconds=5)
-    return res
+@log_error
+def start(update, context):
+    """Команда /start"""
+    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+
+start_handler = CommandHandler('start', start)
+dispatcher.add_handler(start_handler)
 
 
-def add_alert(id, time, chat_id, message):
-    """Создает событие оповещения и добавляет его в список"""
-    timer_delay = calculate_timer_delay(time)
-    timer_delay = float(timer_delay.seconds)
-    thread = make_alert(id, timer_delay, chat_id, message)
-    ALERTS_LIST.append({'id': id, 'thread': thread})
+@log_error
+def button_help_handler(update: Update, context: CallbackContext):
+    update.message.reply_text(
+        text='Раздел помощь',
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
 
-def pop_allert(id):
-    """Удаляет событие оповещения из списка"""
-    for alert in ALERTS_LIST:
-        if alert['id'] == id:
-            ALERTS_LIST.remove(alert)
+@log_error
+def test_message_handler(update: Update, context: CallbackContext):
+    text = update.message.text
 
+    if text == BUTTON_HELP:
+        print('ПОМОЩЬ')
+        return button_help_handler(update=update, context=context)
 
-def generate_message(username):
-    """Генерирует сообщение, которое нужно отправить в чат"""
-    return f"@{username} Обратный отсчет окончен. Отчитайтесь пожалуйста"
+    reply_markup = ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=BUTTON_HELP)
+            ],
+        ],
+        resize_keyboard=True,
+    )
 
+    update.message.reply_text(
+        text='Йо! тестовое сообщение!',
+        reply_markup=reply_markup,
+    )
 
-def get_alerts_list_from_db():
-    """Получает список всех неотработавших таймеров"""
-    cursor.execute("""SELECT id, chat_id, username, time FROM alerts WHERE status = FALSE""")
-    return cursor.fetchall()
-
-
-def change_alert_status_in_db(id):
-    """Изменяет статус таймера на отработанный в БД"""
-    cursor.execute(f"""UPDATE alerts SET status = TRUE WHERE id = {int(id)};""")
-    conn.commit()
-
-
-def run_timers_event_loop():
-    """Запускает ивент луп с таймерами"""
-    x = threading.Thread(target=timers_event_loop)
-    return x
-
-
-def timers_event_loop():
-    """Event loop для обработки тасков с таймерами"""
-    while True:
-        alerts_list = get_alerts_list_from_db()
-        for alert in alerts_list:
-            add_flag = True
-            for timer in ALERTS_LIST:
-                if int(timer['id']) == alert['id']:
-                    add_flag = False
-            if add_flag:
-                add_alert(
-                    id=alert['id'],
-                    time=alert['time'],
-                    chat_id=alert['chat_id'],
-                    message=generate_message(alert['username'])
-                )
-        sleep(5)
+dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=test_message_handler))
 
 
 if __name__ == '__main__':
-    event_loop = run_timers_event_loop()
-    event_loop.start()
+    updater.start_polling()
+    updater.idle()
