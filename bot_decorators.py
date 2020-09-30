@@ -12,6 +12,7 @@
 ADMIN_IDS = [
     126423831,
 ]
+MAIN_ADMIN_ID = 126423831
 
 
 def log_error(f):
@@ -20,7 +21,11 @@ def log_error(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            print(f'ERROR: {e}')
+            error = f'ERROR {e} in '
+            print(error)
+            update = args[0]
+            if update and hasattr(update, 'message'):
+                update.message.bot.send_message(chat_id=MAIN_ADMIN_ID, text=error)
             raise e
     return inner
 
