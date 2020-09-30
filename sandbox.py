@@ -42,6 +42,7 @@ def start(update, context):
     """Команда /start"""
     context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
 
+
 start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
 
@@ -52,6 +53,7 @@ def secret_command(update: Update, context: CallbackContext):
     update.message.reply_text(
         text='Секретные секреты',
     )
+
 
 commands_secret_command = CommandHandler('secret', secret_command)
 dispatcher.add_handler(commands_secret_command)
@@ -86,6 +88,7 @@ def test_message_handler(update: Update, context: CallbackContext):
         text=f'Йо! тестовое сообщение! Ваш ID = {update.message.chat_id}',
         reply_markup=reply_markup,
     )
+
 
 dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=test_message_handler))
 
