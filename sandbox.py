@@ -96,3 +96,5 @@ dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=test_message
 if __name__ == '__main__':
     updater.start_polling()
     updater.idle()
+
+# TODO: Заебашить просто бесконечный цикл с пушем сообщений и админку на джанге
