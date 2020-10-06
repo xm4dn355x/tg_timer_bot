@@ -18,7 +18,6 @@ from psycopg2.extras import DictCursor
 
 
 # Globals
-from sandbox import bot
 
 ALERTS_LIST = []
 
@@ -28,15 +27,15 @@ cursor = conn.cursor(cursor_factory=DictCursor)
 cursor.execute("""SET TIMEZONE='Asia/Yekaterinburg';""")
 
 
-def make_alert(id, timer_delay, chat_id, message):
+def make_alert(id, timer_delay, bot, chat_id, message):
     """Создает событие оповещения"""
     print('make alert')
-    t = threading.Timer(timer_delay, send_alert, args=(id, chat_id, message))
+    t = threading.Timer(timer_delay, send_alert, args=(id, bot, chat_id, message))
     t.start()
     return t
 
 
-def send_alert(id, chat_id, message):   # TODO: Переделать замоканную функцию под метод бота.
+def send_alert(id, bot, chat_id, message):
     """Отправка оповещения"""
     print('send alert')
     print(f'alert: {chat_id} {message} {datetime.now()}')
@@ -54,12 +53,12 @@ def calculate_timer_delay(alert_time):
     return res
 
 
-def add_alert(id, time, chat_id, message, bot):
+def add_alert(id, time, bot, chat_id, message):
     """Создает событие оповещения и добавляет его в список"""
     print('add alert')
     timer_delay = calculate_timer_delay(time)
     timer_delay = float(timer_delay.seconds)
-    thread = make_alert(id, timer_delay, chat_id, message, bot)
+    thread = make_alert(id, timer_delay, bot, chat_id, message)
     ALERTS_LIST.append({'id': id, 'thread': thread})
 
 
@@ -95,14 +94,14 @@ def change_alert_status_in_db(id):
     conn.commit()
 
 
-def run_timers_event_loop():
+def run_timers_event_loop(bot):
     """Запускает ивент луп с таймерами"""
-    print('run timers event loop')
-    x = threading.Thread(target=timers_event_loop)
+    print('init thread timers event loop')
+    x = threading.Thread(target=timers_event_loop, args=(bot,))
     return x
 
 
-def timers_event_loop():
+def timers_event_loop(bot):
     """Event loop для обработки тасков с таймерами"""
     print('timers event loop')
     while True:
@@ -116,6 +115,7 @@ def timers_event_loop():
                 add_alert(
                     id=alert['id'],
                     time=alert['time'],
+                    bot=bot,
                     chat_id=alert['chat_id'],
                     message=generate_message(alert['username']),
                 )
