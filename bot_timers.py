@@ -37,8 +37,7 @@ def make_alert(id, timer_delay, bot, chat_id, message):
 
 def send_alert(id, bot, chat_id, message):
     """Отправка оповещения"""
-    print('send alert')
-    print(f'alert: {chat_id} {message} {datetime.now()}')
+    print(f'send alert: {chat_id} {message} {datetime.now()}')
     bot.send_message(chat_id=chat_id, text=message)
     pop_allert(id)
     change_alert_status_in_db(id)
