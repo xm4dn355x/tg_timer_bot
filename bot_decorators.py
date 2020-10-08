@@ -12,6 +12,9 @@
 ADMIN_IDS = [
     126423831,
 ]
+MODERATOR_IDS = [
+    126423831,
+]
 MAIN_ADMIN_ID = 126423831
 
 
@@ -42,4 +45,11 @@ def admin_access(f):
 
 
 def moderator_access(f):
-    pass
+    def inner(*args, **kwargs):
+        update = args[0]
+        if update and hasattr(update, 'message'):
+            chat_id = update.message.chat_id
+            if chat_id in MODERATOR_IDS:
+                return f(*args, **kwargs)
+
+    return inner
