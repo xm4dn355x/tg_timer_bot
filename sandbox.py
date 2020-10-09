@@ -13,12 +13,16 @@ import logging
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
-from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
+from telegram import Bot, KeyboardButton, InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardMarkup, \
+    ReplyKeyboardRemove, Update
+from telegram.ext import CallbackContext, CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
 from telegram.utils.request import Request
 
 from bot_config import API_TOKEN
 from bot_decorators import admin_access, log_error
+
+import bot_timers as alerts
+from inline_mode_timer import InlineTimerSetter
 
 
 # DB Connection
@@ -29,7 +33,10 @@ cursor = conn.cursor(cursor_factory=DictCursor)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-BUTTON_HELP = 'Помощь'
+inline_timer_setter = InlineTimerSetter(chat_id=0, time=0)
+
+
+BUTTON_ADD_TIMER = 'Добавить таймер'
 
 req = Request(connect_timeout=3)
 bot = Bot(request=req, token=API_TOKEN)
@@ -37,64 +44,92 @@ updater = Updater(bot=bot, use_context=True)
 dispatcher = updater.dispatcher
 
 
-@log_error
-def start(update, context):
-    """Команда /start"""
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+def inline_handler(update: Update, context: CallbackContext):
+    query = update.inline_query.query
+    query = query.strip()
+    res = []
+    res.append(InlineQueryResultArticle(
+        id=1,
+        title=f'Я так понял это заголовок в всплывающей строчке {query}',
+        input_message_content=InputTextMessageContent(
+            message_text=f'А здесь по ходу должен быть ответ на query {query}'
+        ),
+    ))
+    update.inline_query.answer(
+        results=res,
+        cache_time=1,
+    )
 
 
-start_handler = CommandHandler('start', start)
-dispatcher.add_handler(start_handler)
+dispatcher.add_handler(InlineQueryHandler(inline_handler))
+
+
+ALERTS_TIMERS_EVENT_LOOP = alerts.run_timers_event_loop(bot=bot)
 
 
 @log_error
 @admin_access
-def secret_command(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        text='Секретные секреты',
-    )
+def start_timers(update: Update, context: CallbackContext):
+    """Команда /start для запуска работы таймеров"""
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Таймеры запущены")
+    print('START timers event loop')
+    ALERTS_TIMERS_EVENT_LOOP.start()
 
 
-commands_secret_command = CommandHandler('secret', secret_command)
-dispatcher.add_handler(commands_secret_command)
+start_handler = CommandHandler('start', start_timers)
+dispatcher.add_handler(start_handler)
 
 
 @log_error
-def button_help_handler(update: Update, context: CallbackContext):
+def button_add_timer_handler(update: Update, context: CallbackContext):
+    bot_data = bot.get_me()
+    chat_id = update.message.chat_id
     update.message.reply_text(
-        text='Раздел помощь',
+        text=f'Создание таймера:\nget me = {bot_data}\n\nchat id = {chat_id}',
         reply_markup=ReplyKeyboardRemove(),
     )
 
 
 @log_error
-def test_message_handler(update: Update, context: CallbackContext):
+def main_message_handler(update: Update, context: CallbackContext):
     text = update.message.text
+    print('message text:')
+    print(text)
+    chat_id = update.message.chat_id
+    groups_list = dispatcher.groups
+    print('groups list:')
+    print(groups_list)
 
-    if text == BUTTON_HELP:
-        print('ПОМОЩЬ')
-        return button_help_handler(update=update, context=context)
+    if text == BUTTON_ADD_TIMER:
+        print('Добавить таймер')
+        return button_add_timer_handler(update=update, context=context)
 
     reply_markup = ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text=BUTTON_HELP)
+                KeyboardButton(text=BUTTON_ADD_TIMER)
             ],
         ],
         resize_keyboard=True,
     )
+    if not text:
+        bot.send_message(
+            text=f'Добавление в чат ID чата = {chat_id} message text = {text}',
+            chat_id=chat_id,
+        )
+    if text:
+        update.message.reply_text(
+            text=f'Сообщение боту в чат ID чата = {chat_id} message text = {text}',
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
-    update.message.reply_text(
-        text=f'Йо! тестовое сообщение! Ваш ID = {update.message.chat_id}',
-        reply_markup=reply_markup,
-    )
+
+dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=main_message_handler))
 
 
-dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=test_message_handler))
+
 
 
 if __name__ == '__main__':
     updater.start_polling()
     updater.idle()
-
-# TODO: Заебашить просто бесконечный цикл с пушем сообщений и админку на джанге
