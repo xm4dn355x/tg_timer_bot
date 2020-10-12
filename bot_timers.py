@@ -122,5 +122,6 @@ def timers_event_loop(bot):
 
 
 if __name__ == '__main__':
+    print('Bot timers')
     event_loop = run_timers_event_loop()
     event_loop.start()
