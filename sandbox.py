@@ -13,16 +13,14 @@ import logging
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from telegram import Bot, KeyboardButton, InlineQueryResultArticle, InputTextMessageContent, ReplyKeyboardMarkup, \
-    ReplyKeyboardRemove, Update
-from telegram.ext import CallbackContext, CommandHandler, Filters, InlineQueryHandler, MessageHandler, Updater
+from telegram import Bot, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
 from telegram.utils.request import Request
 
 from bot_config import API_TOKEN
 from bot_decorators import admin_access, log_error
 
 import bot_timers as alerts
-from inline_mode_timer import InlineTimerSetter
 
 
 # DB Connection
@@ -33,35 +31,12 @@ cursor = conn.cursor(cursor_factory=DictCursor)
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 
-inline_timer_setter = InlineTimerSetter(chat_id=0, time=0)
-
-
 BUTTON_ADD_TIMER = 'Добавить таймер'
 
 req = Request(connect_timeout=3)
 bot = Bot(request=req, token=API_TOKEN)
 updater = Updater(bot=bot, use_context=True)
 dispatcher = updater.dispatcher
-
-
-def inline_handler(update: Update, context: CallbackContext):
-    query = update.inline_query.query
-    query = query.strip()
-    res = []
-    res.append(InlineQueryResultArticle(
-        id=1,
-        title=f'Я так понял это заголовок в всплывающей строчке {query}',
-        input_message_content=InputTextMessageContent(
-            message_text=f'А здесь по ходу должен быть ответ на query {query}'
-        ),
-    ))
-    update.inline_query.answer(
-        results=res,
-        cache_time=1,
-    )
-
-
-dispatcher.add_handler(InlineQueryHandler(inline_handler))
 
 
 ALERTS_TIMERS_EVENT_LOOP = alerts.run_timers_event_loop(bot=bot)
@@ -125,9 +100,6 @@ def main_message_handler(update: Update, context: CallbackContext):
 
 
 dispatcher.add_handler(MessageHandler(filters=Filters.all, callback=main_message_handler))
-
-
-
 
 
 if __name__ == '__main__':
