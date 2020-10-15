@@ -43,6 +43,16 @@ ALERTS_TIMERS_EVENT_LOOP = alerts.run_timers_event_loop(bot=bot)
 
 
 @log_error
+def start_command(update: Update, context: CallbackContext):
+    """Команда при добавлении бота в чат, или начала работы с ботом"""
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Начало работы с ботом")
+
+
+start_command_handler = CommandHandler('start', start_command)
+dispatcher.add_handler(start_command_handler)
+
+
+@log_error
 @admin_access
 def start_timers(update: Update, context: CallbackContext):
     """Команда /start для запуска работы таймеров"""
@@ -51,8 +61,8 @@ def start_timers(update: Update, context: CallbackContext):
     ALERTS_TIMERS_EVENT_LOOP.start()
 
 
-start_handler = CommandHandler('start', start_timers)
-dispatcher.add_handler(start_handler)
+start_timers_handler = CommandHandler('start_timers', start_timers)
+dispatcher.add_handler(start_timers_handler)
 
 
 @log_error
