@@ -44,9 +44,18 @@ ALERTS_TIMERS_EVENT_LOOP = alerts.run_timers_event_loop(bot=bot)
 
 
 @log_error
-def start_command(update: Update, context: CallbackContext):
+def start_command(update: Update, context: CallbackContext): # TODO: Добавить обработчик добавления в чат
     """Команда при добавлении бота в чат, или начала работы с ботом"""
     chat_id = update.message.chat_id
+    chat_type = update.message.chat.type
+    chat_name = update.message.chat.title
+    print(chat_name)
+    if chat_type == 'private':
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f'На данный момент бот предназначен для работы исключительно в чатах',
+        )
+        return True
     keyboard = [
         [
             InlineKeyboardButton('Добавить таймер', callback_data='add_timer'),
@@ -54,7 +63,12 @@ def start_command(update: Update, context: CallbackContext):
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
+    # update.message.reply_text(
+    #     text=f'Подключение бота к чату {chat_id}',
+    #     reply_markup=reply_markup,
+    # )
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
         text=f'Подключение бота к чату {chat_id}',
         reply_markup=reply_markup,
     )
