@@ -21,6 +21,7 @@ from bot_config import API_TOKEN
 from bot_decorators import admin_access, log_error
 
 import bot_timers as alerts
+from db_utils import add_chat_to_db
 
 
 # DB Connection
@@ -44,7 +45,7 @@ ALERTS_TIMERS_EVENT_LOOP = alerts.run_timers_event_loop(bot=bot)
 
 
 @log_error
-def start_command(update: Update, context: CallbackContext): # TODO: Добавить обработчик добавления в чат
+def start_command(update: Update, context: CallbackContext):    # TODO: Добавить обработчик добавления в чат
     """Команда при добавлении бота в чат, или начала работы с ботом"""
     chat_id = update.message.chat_id
     chat_type = update.message.chat.type
@@ -56,6 +57,7 @@ def start_command(update: Update, context: CallbackContext): # TODO: Добав�
             text=f'На данный момент бот предназначен для работы исключительно в чатах',
         )
         return True
+    add_chat_to_db(conn=conn, cursor=cursor, chat_name=chat_name, chat_id=chat_id)
     keyboard = [
         [
             InlineKeyboardButton('Добавить таймер', callback_data='add_timer'),
@@ -67,6 +69,7 @@ def start_command(update: Update, context: CallbackContext): # TODO: Добав�
     #     text=f'Подключение бота к чату {chat_id}',
     #     reply_markup=reply_markup,
     # )
+
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text=f'Подключение бота к чату {chat_id}',
