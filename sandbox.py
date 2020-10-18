@@ -13,7 +13,7 @@ import logging
 import psycopg2
 from psycopg2.extras import DictCursor
 
-from telegram import Bot, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import CallbackContext, CallbackQueryHandler, CommandHandler, Filters, MessageHandler, Updater
 from telegram.utils.request import Request
 
