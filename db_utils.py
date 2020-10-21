@@ -54,7 +54,7 @@ def add_curator_to_chat(conn: psycopg2.connect, cursor, chat_id: int, user_id: i
         conn.commit()
 
 
-def get_curators_ids(chat_id):
+def get_curators_ids(chat_id: int) -> list:
     cursor.execute(f"""SELECT user_id FROM curators WHERE chat_id = {chat_id}""")
     rows = cursor.fetchall()
     curators = []
@@ -63,7 +63,7 @@ def get_curators_ids(chat_id):
     return curators
 
 
-def get_chat_name_by_chat_id(chat_id):
+def get_chat_name_by_chat_id(chat_id: int) -> str:
     cursor.execute(f"""SELECT chat_name FROM chats WHERE chat_id = {chat_id}""")
     res = cursor.fetchone()
     return res['chat_name']
