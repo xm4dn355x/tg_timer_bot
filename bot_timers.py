@@ -9,17 +9,24 @@
 #####################################################################################################################
 
 
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from time import sleep
 import threading
 import psycopg2
 from psycopg2.extras import DictCursor
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
 # Globals
 
 ALERTS_LIST = []
+keyboard = [
+    [
+        InlineKeyboardButton('Да', callback_data='report_true'),
+        InlineKeyboardButton('Нет', callback_data='report_false'),
+    ]
+]
+REPORT_MARKUP = InlineKeyboardMarkup(keyboard)
 
 # DB Connection
 conn = psycopg2.connect(dbname='alerts_bot', user='alerts_bot', password='alerts_bot', host='localhost')
@@ -38,7 +45,7 @@ def make_alert(id, timer_delay, bot, chat_id, message):
 def send_alert(id, bot, chat_id, message):
     """Отправка оповещения"""
     print(f'send alert: {chat_id} {message} {datetime.now()}')
-    bot.send_message(chat_id=chat_id, text=message)
+    bot.send_message(chat_id=chat_id, text=message, reply_markup=REPORT_MARKUP)
     pop_allert(id)
     change_alert_status_in_db(id)
 
@@ -69,12 +76,6 @@ def pop_allert(id):
             ALERTS_LIST.remove(alert)
 
 
-def generate_message(username):
-    """Генерирует сообщение, которое нужно отправить в чат"""
-    print('generate message')
-    return f"@{username} Обратный отсчет окончен. Отчитайтесь пожалуйста"
-
-
 def get_alerts_list_from_db():
     """Получает список всех неотработавших таймеров"""
     print('get alerts list from db')
@@ -83,6 +84,7 @@ def get_alerts_list_from_db():
         res = cursor.fetchall()
     except psycopg2.ProgrammingError:
         res = []
+    print(res)
     return res
 
 
@@ -116,7 +118,7 @@ def timers_event_loop(bot):
                     time=alert['time'],
                     bot=bot,
                     chat_id=alert['chat_id'],
-                    message=generate_message(alert['username']),
+                    message="Выполнена-ли поставленная задача?",
                 )
         sleep(5)
 
