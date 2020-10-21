@@ -29,6 +29,7 @@ def add_chat_to_db(conn: psycopg2.connect, cursor, chat_name: str, chat_id: int)
 
 
 def add_timer_to_db(conn: psycopg2.connect, cursor, chat_id: int, time: datetime):
+    """Добавляет таймер в БД"""
     print('add_timer_to_db')
     time = time - timedelta(hours=5)
     cursor.execute(f"""INSERT INTO alerts (chat_id, time) VALUES ({chat_id}, '{time}')""")
@@ -36,6 +37,7 @@ def add_timer_to_db(conn: psycopg2.connect, cursor, chat_id: int, time: datetime
 
 
 def add_curator_to_chat(conn: psycopg2.connect, cursor, chat_id: int, user_id: int, username: str):
+    """Добавляет куратора чата в БД"""
     print('add_curator_to_chat')
     cursor.execute(f"""SELECT user_id FROM curators WHERE chat_id = {chat_id}""")
     rows = cursor.fetchall()
@@ -55,6 +57,7 @@ def add_curator_to_chat(conn: psycopg2.connect, cursor, chat_id: int, user_id: i
 
 
 def get_curators_ids(chat_id: int) -> list:
+    """Получает id чата и возвращает список с id кураторов"""
     cursor.execute(f"""SELECT user_id FROM curators WHERE chat_id = {chat_id}""")
     rows = cursor.fetchall()
     curators = []
@@ -64,12 +67,14 @@ def get_curators_ids(chat_id: int) -> list:
 
 
 def get_chat_name_by_chat_id(chat_id: int) -> str:
+    """Получает id чата и возвращает название чата"""
     cursor.execute(f"""SELECT chat_name FROM chats WHERE chat_id = {chat_id}""")
     res = cursor.fetchone()
     return res['chat_name']
 
 
 def get_chat_curators_names(chat_id: int) -> list:
+    """Получает id чата и возвращает список с id и именами кураторов в данном чате"""
     cursor.execute(f"""SELECT user_id, username FROM curators WHERE chat_id = {chat_id}""")
     res = cursor.fetchall()
     return res
