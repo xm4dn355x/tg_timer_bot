@@ -28,11 +28,11 @@ def add_chat_to_db(conn: psycopg2.connect, cursor, chat_name: str, chat_id: int)
         conn.commit()
 
 
-def add_timer_to_db(conn: psycopg2.connect, cursor, chat_id: int, time: datetime):
+def add_timer_to_db(conn: psycopg2.connect, cursor, user_id: int, chat_id: int, time: datetime):
     """Добавляет таймер в БД"""
     print('add_timer_to_db')
     time = time - timedelta(hours=5)
-    cursor.execute(f"""INSERT INTO alerts (chat_id, time) VALUES ({chat_id}, '{time}')""")
+    cursor.execute(f"""INSERT INTO alerts (user_id, chat_id, time) VALUES ({user_id}, {chat_id}, '{time}')""")
     conn.commit()
 
 
