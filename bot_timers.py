@@ -45,7 +45,7 @@ def make_alert(id, timer_delay, bot, chat_id, message):
 def send_alert(id, bot, chat_id, message):
     """Отправка оповещения"""
     print(f'send alert: {chat_id} {message} {datetime.now()}')
-    bot.send_message(chat_id=chat_id, text=message, reply_markup=REPORT_MARKUP)
+    bot.send_message(chat_id=chat_id, text=message, parse_mode="Markdown") # reply_markup=REPORT_MARKUP
     pop_allert(id)
     change_alert_status_in_db(id)
 
@@ -79,7 +79,7 @@ def pop_allert(id):
 def get_alerts_list_from_db():
     """Получает список всех неотработавших таймеров"""
     print('get alerts list from db')
-    cursor.execute("""SELECT id, chat_id, username, time FROM alerts WHERE status = FALSE""")
+    cursor.execute("""SELECT id, chat_id, user_id, time FROM alerts WHERE status = FALSE""")
     try:
         res = cursor.fetchall()
     except psycopg2.ProgrammingError:
@@ -118,7 +118,7 @@ def timers_event_loop(bot):
                     time=alert['time'],
                     bot=bot,
                     chat_id=alert['chat_id'],
-                    message="Выполнена-ли поставленная задача?",
+                    message=f"[Внимание!](tg://user?id={alert['user_id']}) Время на выполнение задачи подошло к концу",
                 )
         sleep(5)
 
